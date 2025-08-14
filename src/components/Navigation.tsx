@@ -18,14 +18,6 @@ export const Navigation: React.FC<NavigationProps> = ({
     window.open('https://futurapay.com/requestfund/fund689bf392506fc', '_blank');
   };
 
-  const handleWhatsApp = () => {
-    window.open('https://wa.me/237672631014', '_blank');
-  };
-
-  const handleTelegram = () => {
-    window.open('https://t.me/habbyforexacadmy237', '_blank');
-  };
-
   return (
     <nav className="bg-gray-800 border-b border-gray-700 px-4 sm:px-6">
       <div className="flex items-center justify-between">
@@ -82,22 +74,6 @@ export const Navigation: React.FC<NavigationProps> = ({
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-3">
-          <button
-            onClick={handleWhatsApp}
-            className="flex items-center space-x-1 sm:space-x-2 bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-2 rounded-lg transition-colors text-xs sm:text-sm"
-          >
-            <span>📱</span>
-            <span className="hidden sm:inline">WhatsApp</span>
-          </button>
-          
-          <button
-            onClick={handleTelegram}
-            className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-2 rounded-lg transition-colors text-xs sm:text-sm"
-          >
-            <span>✈️</span>
-            <span className="hidden sm:inline">Telegram</span>
-          </button>
-          
           <button
             onClick={handleDeposit}
             className="flex items-center space-x-1 sm:space-x-2 bg-green-600 hover:bg-green-700 text-white px-2 sm:px-4 py-2 rounded-lg transition-colors text-xs sm:text-sm"

@@ -118,6 +118,24 @@ export const TradingPanel: React.FC<TradingPanelProps> = ({
 
         <div className="text-xs text-gray-400 text-center mt-4 space-y-2">
           <p>⚠️ Risk Warning: Trading involves risk. Only invest what you can afford to lose.</p>
+          
+          <div className="flex justify-center space-x-3 mt-4 pt-4 border-t border-gray-700">
+            <button
+              onClick={() => window.open('https://wa.me/237672631014', '_blank')}
+              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              <span>📱</span>
+              <span>WhatsApp Support</span>
+            </button>
+            
+            <button
+              onClick={() => window.open('https://t.me/habbyforexacadmy237', '_blank')}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              <span>✈️</span>
+              <span>Telegram</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
