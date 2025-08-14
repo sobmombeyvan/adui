@@ -359,7 +359,7 @@ function App() {
 
       <div className="p-6">
         {activeTab === 'trading' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
             <div className="lg:col-span-1">
               <CurrencyList
                 pairs={currencyPairs}
@@ -367,7 +367,7 @@ function App() {
                 onSelectPair={setSelectedPair}
               />
             </div>
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 order-last lg:order-none">
               <TradingChart data={candleData} pair={selectedPair} />
             </div>
             <div className="lg:col-span-1">

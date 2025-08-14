@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, User, Mail, Phone, MapPin, TrendingUp } from 'lucide-react';
+import { X, Eye, EyeOff, User, Mail, Phone, TrendingUp } from 'lucide-react';
 import { LoginCredentials, RegisterData } from '../types/user';
 
 interface AuthModalProps {
@@ -64,7 +64,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg w-full max-w-md shadow-2xl border border-gray-700">
+      <div className="bg-gray-800 rounded-lg w-full max-w-md shadow-2xl border border-gray-700 max-h-[90vh] overflow-y-auto">
         {/* Professional Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-lg">
           <div className="flex items-center justify-center mb-4">
@@ -97,7 +97,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {mode === 'register' && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-2">
                     First Name
@@ -109,7 +109,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                       placeholder="John"
                       required
                     />
@@ -126,7 +126,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                       placeholder="Doe"
                       required
                     />
@@ -145,36 +145,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     placeholder="+1 (555) 123-4567"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Country (Optional)
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Country</option>
-                    <option value="US">United States</option>
-                    <option value="UK">United Kingdom</option>
-                    <option value="CA">Canada</option>
-                    <option value="AU">Australia</option>
-                    <option value="DE">Germany</option>
-                    <option value="FR">France</option>
-                    <option value="JP">Japan</option>
-                    <option value="SG">Singapore</option>
-                  </select>
-                </div>
-              </div>
             </>
           )}
 
@@ -189,7 +165,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-700 text-white rounded-lg pl-10 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 placeholder="john@example.com"
                 required
               />
@@ -206,7 +182,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full bg-gray-700 text-white rounded-lg pl-3 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-700 text-white rounded-lg pl-3 pr-10 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 placeholder="Enter your password"
                 required
                 minLength={6}
@@ -224,7 +200,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg transition-all duration-200 font-semibold shadow-lg transform hover:scale-105 disabled:transform-none"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-lg transition-all duration-200 font-semibold shadow-lg transform hover:scale-105 disabled:transform-none text-base"
           >
             {isLoading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
