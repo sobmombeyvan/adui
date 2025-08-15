@@ -1,4 +1,5 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { tradingService } from './trading';
 import { Trade, TradingStats } from '../types/trading';
 
 class SupabaseTradingService {
@@ -20,6 +21,12 @@ class SupabaseTradingService {
     amount: number, 
     currentPrice: number
   ): Promise<{ success: boolean; trade?: Trade; error?: string }> {
+    // Fallback to local trading if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      const tradeType = type === 'call' ? 'buy' : 'sell';
+      return tradingService.executeTrade(userId, pair, tradeType, amount, currentPrice);
+    }
+
     try {
       // Check user balance
       const { data: account, error: accountError } = await supabase
@@ -119,6 +126,11 @@ class SupabaseTradingService {
     tradeId: string, 
     exitPrice: number
   ): Promise<{ success: boolean; profit?: number; error?: string }> {
+    // Fallback to local trading if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      return tradingService.closeTrade(userId, tradeId, exitPrice);
+    }
+
     try {
       // Get trade data
       const { data: trade, error: tradeError } = await supabase
@@ -199,6 +211,11 @@ class SupabaseTradingService {
   }
 
   async getUserTrades(userId: string): Promise<Trade[]> {
+    // Fallback to local trading if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      return tradingService.getUserTrades(userId);
+    }
+
     try {
       const { data: trades, error } = await supabase
         .from('trades')
@@ -235,6 +252,11 @@ class SupabaseTradingService {
   }
 
   async getUserStats(userId: string): Promise<TradingStats> {
+    // Fallback to local trading if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      return tradingService.getUserStats(userId);
+    }
+
     try {
       const { data: trades, error } = await supabase
         .from('trades')
@@ -282,6 +304,11 @@ class SupabaseTradingService {
   }
 
   updateTradePrice(userId: string, tradeId: string, newPrice: number) {
+    // Fallback to local trading if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      return tradingService.updateTradePrice(userId, tradeId, newPrice);
+    }
+
     // This is for real-time price updates in the UI
     // The actual closing will be handled by the auto-close mechanism
   }

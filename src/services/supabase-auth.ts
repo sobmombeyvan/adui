@@ -1,8 +1,14 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { authService } from './auth';
 import { User, LoginCredentials, RegisterData } from '../types/user';
 
 class SupabaseAuthService {
   async register(data: RegisterData): Promise<{ success: boolean; user?: User; error?: string }> {
+    // Fallback to local auth if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.register(data);
+    }
+
     try {
       // Register user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -63,6 +69,11 @@ class SupabaseAuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<{ success: boolean; user?: User; error?: string }> {
+    // Fallback to local auth if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.login(credentials);
+    }
+
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
@@ -90,10 +101,17 @@ class SupabaseAuthService {
   }
 
   async logout(): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.logout();
+    }
     await supabase.auth.signOut();
   }
 
   async getCurrentUser(): Promise<User | null> {
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.getCurrentUser();
+    }
+
     try {
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
@@ -117,6 +135,10 @@ class SupabaseAuthService {
   }
 
   private async getUserData(userId: string): Promise<User | null> {
+    if (!isSupabaseConfigured || !supabase) {
+      return null;
+    }
+
     try {
       // Get auth user first for email and metadata
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
@@ -228,6 +250,11 @@ class SupabaseAuthService {
 
   // Admin functions
   async getAllUsers(): Promise<AdminUser[]> {
+    if (!isSupabaseConfigured || !supabase) {
+      // Return demo admin users for local auth
+      return [];
+    }
+
     try {
       // Use simplified version for client-side access
       return await this.getAllUsersSimple();
@@ -238,6 +265,10 @@ class SupabaseAuthService {
   }
 
   async getAllUsersSimple(): Promise<AdminUser[]> {
+    if (!isSupabaseConfigured || !supabase) {
+      return [];
+    }
+
     try {
       // Get profiles first
       const { data: profiles, error: profileError } = await supabase
@@ -301,6 +332,10 @@ class SupabaseAuthService {
   }
 
   async updateUserBalance(userId: string, newBalance: number): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.updateBalance(userId, newBalance);
+    }
+
     try {
       const { error } = await supabase
         .from('accounts')
@@ -315,6 +350,10 @@ class SupabaseAuthService {
   }
 
   async suspendUser(userId: string): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      return true;
+    }
+
     try {
       // In a real app, you'd update a status field
       // For now, we'll just return success
@@ -325,6 +364,10 @@ class SupabaseAuthService {
     }
   }
   async updateBalance(userId: string, newBalance: number): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.updateBalance(userId, newBalance);
+    }
+
     try {
       const { error } = await supabase
         .from('accounts')
@@ -339,6 +382,10 @@ class SupabaseAuthService {
   }
 
   async addDeposit(userId: string, amount: number): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.addDeposit(userId, amount);
+    }
+
     try {
       // Create transaction record
       const { error: transactionError } = await supabase
@@ -382,6 +429,10 @@ class SupabaseAuthService {
   }
 
   async processWithdrawal(userId: string, amount: number): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.processWithdrawal(userId, amount);
+    }
+
     try {
       // Check current balance
       const { data: account, error: accountError } = await supabase
@@ -426,6 +477,11 @@ class SupabaseAuthService {
 
   // Listen to auth state changes
   onAuthStateChange(callback: (user: User | null) => void) {
+    if (!isSupabaseConfigured || !supabase) {
+      // For local auth, we'll simulate auth state changes
+      return { data: { subscription: { unsubscribe: () => {} } } };
+    }
+
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const user = await this.getUserData(session.user.id);

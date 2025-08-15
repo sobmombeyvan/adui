@@ -4,7 +4,6 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
-  country?: string;
   balance: number;
   totalDeposits: number;
   totalWithdrawals: number;
@@ -32,7 +31,6 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   phone?: string;
-  country?: string;
 }
 
 export interface Transaction {
