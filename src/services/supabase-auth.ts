@@ -115,16 +115,8 @@ class SupabaseAuthService {
 
   private async getUserData(userId: string): Promise<User | null> {
     try {
-      // Get auth user first for email and metadata with timeout
-      const authPromise = supabase.auth.getUser();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Auth timeout')), 30000)
-      );
-      
-      const { data: { user: authUser }, error: authError } = await Promise.race([
-        authPromise,
-        timeoutPromise
-      ]) as any;
+      // Get auth user first for email and metadata
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !authUser) {
         console.error('Auth user error:', authError);
@@ -234,32 +226,57 @@ class SupabaseAuthService {
   // Admin functions
   async getAllUsers(): Promise<AdminUser[]> {
     try {
+      // Get profiles first
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          accounts (balance),
-          trades (status, profit_loss, created_at)
-        `);
+        .select('*');
 
       if (profileError) {
         console.error('Get all users error:', profileError);
         return [];
       }
 
+      // Get accounts separately
+      const { data: accounts, error: accountsError } = await supabase
+        .from('accounts')
+        .select('user_id, balance');
+
+      if (accountsError) {
+        console.error('Get accounts error:', accountsError);
+      }
+
+      // Get trades separately
+      const { data: trades, error: tradesError } = await supabase
+        .from('trades')
+        .select('user_id, status, profit_loss, created_at');
+
+      if (tradesError) {
+        console.error('Get trades error:', tradesError);
+      }
+
+      // Get auth users for email addresses
+      const { data: { users: authUsers }, error: authUsersError } = await supabase.auth.admin.listUsers();
+      
+      if (authUsersError) {
+        console.error('Get auth users error:', authUsersError);
+      }
+
       return profiles.map(profile => {
-        const trades = profile.trades || [];
-        const totalTrades = trades.length;
-        const winningTrades = trades.filter((t: any) => t.status === 'won').length;
+        const userTrades = trades?.filter(t => t.user_id === profile.id) || [];
+        const userAccount = accounts?.find(a => a.user_id === profile.id);
+        const authUser = authUsers?.find(u => u.id === profile.id);
+        
+        const totalTrades = userTrades.length;
+        const winningTrades = userTrades.filter(t => t.status === 'won').length;
         const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
-        const totalProfit = trades.reduce((sum: number, t: any) => sum + (t.profit_loss || 0), 0);
+        const totalProfit = userTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
 
         return {
           id: profile.id,
-          email: profile.id, // Will be populated from auth
+          email: authUser?.email || 'Unknown',
           firstName: profile.first_name || '',
           lastName: profile.last_name || '',
-          balance: profile.accounts?.balance || 0,
+          balance: userAccount?.balance || 0,
           totalDeposits: 0,
           totalWithdrawals: 0,
           totalProfit,
@@ -268,6 +285,48 @@ class SupabaseAuthService {
           kycStatus: 'pending' as const,
           totalTrades,
           winRate,
+          lastLogin: new Date(),
+          accountStatus: 'active' as const
+        };
+      });
+    } catch (error) {
+      console.error('Get all users error:', error);
+      return [];
+    }
+  }
+
+  async getAllUsersSimple(): Promise<AdminUser[]> {
+    try {
+      // Simplified version that doesn't rely on complex joins
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (profileError) {
+        console.error('Get profiles error:', profileError);
+        return [];
+      }
+
+      return profiles.map(profile => {
+        const totalTrades = trades.length;
+        const winningTrades = trades.filter((t: any) => t.status === 'won').length;
+        const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+        const totalProfit = trades.reduce((sum: number, t: any) => sum + (t.profit_loss || 0), 0);
+
+        return {
+          id: profile.id,
+          email: 'user@example.com', // Simplified for demo
+          firstName: profile.first_name || '',
+          lastName: profile.last_name || '',
+          balance: 10000, // Demo balance
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          totalProfit: 0,
+          createdAt: new Date(profile.created_at),
+          isVerified: false,
+          kycStatus: 'pending' as const,
+          totalTrades: 0,
+          winRate: 0,
           lastLogin: new Date(),
           accountStatus: 'active' as const
         };

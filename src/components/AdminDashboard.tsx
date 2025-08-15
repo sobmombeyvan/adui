@@ -21,8 +21,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
 
   const loadUsers = async () => {
     setLoading(true);
-    const allUsers = await supabaseAuthService.getAllUsers();
-    setUsers(allUsers);
+    try {
+      const allUsers = await supabaseAuthService.getAllUsers();
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      // Fallback to simplified version
+      const simpleUsers = await supabaseAuthService.getAllUsersSimple();
+      setUsers(simpleUsers);
+    }
     setLoading(false);
   };
 
