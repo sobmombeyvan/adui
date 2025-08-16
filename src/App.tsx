@@ -42,40 +42,17 @@ function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Set a timeout to prevent infinite loading
-        const timeoutId = setTimeout(() => {
-          console.log('Auth initialization timeout, showing login');
+        const user = await supabaseAuthService.getCurrentUser();
+        
+        if (user) {
           setAuthState({
-            user: null,
-            isAuthenticated: false,
+            user,
+            isAuthenticated: true,
             isLoading: false
           });
-          setAuthModal({ isOpen: true, mode: 'login' });
-        }, 5000);
-
-        try {
-          const user = await supabaseAuthService.getCurrentUser();
-          clearTimeout(timeoutId);
-          
-          if (user) {
-            setAuthState({
-              user,
-              isAuthenticated: true,
-              isLoading: false
-            });
-            // Load user data in background for faster initial load
-            setTimeout(() => loadUserTrades(user.id), 100);
-          } else {
-            setAuthState({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false
-            });
-            setAuthModal({ isOpen: true, mode: 'login' });
-          }
-        } catch (authError) {
-          clearTimeout(timeoutId);
-          console.error('Auth error:', authError);
+          // Load user data in background for faster initial load
+          loadUserTrades(user.id);
+        } else {
           setAuthState({
             user: null,
             isAuthenticated: false,
@@ -84,7 +61,7 @@ function App() {
           setAuthModal({ isOpen: true, mode: 'login' });
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('Auth error:', error);
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -113,8 +90,6 @@ function App() {
             isAuthenticated: false,
             isLoading: false
           });
-          setTrades([]);
-          setAuthModal({ isOpen: true, mode: 'login' });
         }
       });
       subscription = authListener.data?.subscription;

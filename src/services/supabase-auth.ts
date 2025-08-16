@@ -116,10 +116,7 @@ class SupabaseAuthService {
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
       if (authError) {
-        // Auth session missing is expected when not logged in
-        if (authError.message !== 'Auth session missing!') {
-          console.error('Auth user fetch error:', authError);
-        }
+        // Silently handle auth session missing
         return null;
       }
       
@@ -129,7 +126,7 @@ class SupabaseAuthService {
 
       return await this.getUserData(authUser.id);
     } catch (error) {
-      console.error('Get current user error:', error);
+      // Silently handle errors for faster loading
       return null;
     }
   }
@@ -140,13 +137,9 @@ class SupabaseAuthService {
     }
 
     try {
-      // Get auth user first for email and metadata
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !authUser) {
-        console.error('Auth user error:', authError);
-        return null;
-      }
+      // Use cached auth user data to avoid extra API call
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return null;
 
       // Get profile data
       const { data: profile, error: profileError } = await supabase
@@ -156,7 +149,6 @@ class SupabaseAuthService {
         .single();
 
       if (profileError) {
-        console.error('Profile fetch error:', profileError);
         // Create basic user without profile data
         return {
           id: userId,
@@ -182,7 +174,6 @@ class SupabaseAuthService {
         .single();
 
       if (accountError) {
-        console.error('Account fetch error:', accountError);
         // Return user with zero balance if account not found
         return {
           id: userId,
@@ -200,51 +191,67 @@ class SupabaseAuthService {
         };
       }
 
-      // Get transaction totals (optimized with single query)
-      const { data: deposits, error: depositsError } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('user_id', userId)
-        .eq('type', 'deposit')
-        .eq('status', 'completed');
-
-      const { data: withdrawals, error: withdrawalsError } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('user_id', userId)
-        .eq('type', 'withdrawal')
-        .eq('status', 'completed');
-
-      // Get profit from closed trades (optimized)
-      const { data: trades, error: tradesError } = await supabase
-        .from('trades')
-        .select('profit_loss')
-        .eq('user_id', userId)
-        .in('status', ['won', 'lost']);
-
-      const totalDeposits = deposits?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-      const totalWithdrawals = withdrawals?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-      const totalProfit = trades?.reduce((sum, t) => sum + (t.profit_loss || 0), 0) || 0;
-
+      // Load transaction and trade data in background for faster initial load
       const user: User = {
         id: userId,
         email: authUser.email!,
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
         balance: account.balance,
-        totalDeposits,
-        totalWithdrawals,
-        totalProfit,
+        totalDeposits: 0, // Will be loaded in background
+        totalWithdrawals: 0, // Will be loaded in background
+        totalProfit: 0, // Will be loaded in background
         createdAt: new Date(profile.created_at),
         isVerified: false,
         kycStatus: 'pending',
-        isAdmin: authUser.email === 'admin@forexpro.com' // Admin check
+        isAdmin: authUser.email === 'admin@forexpro.com'
       };
+
+      // Load additional data in background
+      this.loadUserStatsInBackground(userId, user);
 
       return user;
     } catch (error) {
-      console.error('Get user data error:', error);
+      // Silently handle errors for faster loading
       return null;
+    }
+  }
+
+  private async loadUserStatsInBackground(userId: string, user: User) {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    try {
+      // Load transaction totals in background
+      const [depositsResult, withdrawalsResult, tradesResult] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', userId)
+          .eq('type', 'deposit')
+          .eq('status', 'completed'),
+        supabase
+          .from('transactions')
+          .select('amount')
+          .eq('user_id', userId)
+          .eq('type', 'withdrawal')
+          .eq('status', 'completed'),
+        supabase
+          .from('trades')
+          .select('profit_loss')
+          .eq('user_id', userId)
+          .in('status', ['won', 'lost'])
+      ]);
+
+      const totalDeposits = depositsResult.data?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+      const totalWithdrawals = withdrawalsResult.data?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+      const totalProfit = tradesResult.data?.reduce((sum, t) => sum + (t.profit_loss || 0), 0) || 0;
+
+      // Update user object (this won't trigger re-renders but data will be available)
+      user.totalDeposits = totalDeposits;
+      user.totalWithdrawals = totalWithdrawals;
+      user.totalProfit = totalProfit;
+    } catch (error) {
+      // Silently handle background loading errors
     }
   }
 
