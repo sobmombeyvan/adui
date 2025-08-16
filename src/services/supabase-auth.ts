@@ -131,14 +131,30 @@ class SupabaseAuthService {
     }
   }
 
+  getCurrentUserSync(): User | null {
+    // Synchronous version for immediate loading
+    if (!isSupabaseConfigured || !supabase) {
+      return authService.getCurrentUser();
+    }
+
+    // For Supabase, we'll return null and let async loading handle it
+    // This prevents blocking the UI
+    return null;
+  }
+
   private async getUserData(userId: string): Promise<User | null> {
     if (!isSupabaseConfigured || !supabase) {
       return null;
     }
 
     try {
-      // Use cached auth user data to avoid extra API call
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      // Get auth user with timeout to prevent hanging
+      const authPromise = supabase.auth.getUser();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth timeout')), 3000)
+      );
+      
+      const { data: { user: authUser } } = await Promise.race([authPromise, timeoutPromise]) as any;
       if (!authUser) return null;
 
       // Get profile data
@@ -208,7 +224,7 @@ class SupabaseAuthService {
       };
 
       // Load additional data in background
-      this.loadUserStatsInBackground(userId, user);
+      setTimeout(() => this.loadUserStatsInBackground(userId, user), 1000);
 
       return user;
     } catch (error) {

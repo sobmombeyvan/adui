@@ -42,7 +42,8 @@ function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const user = await supabaseAuthService.getCurrentUser();
+        // Quick auth check without blocking
+        const user = supabaseAuthService.getCurrentUserSync();
         
         if (user) {
           setAuthState({
@@ -50,39 +51,7 @@ function App() {
             isAuthenticated: true,
             isLoading: false
           });
-          // Load user data in background for faster initial load
-          loadUserTrades(user.id);
-        } else {
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false
-          });
-          setAuthModal({ isOpen: true, mode: 'login' });
-        }
-      } catch (error) {
-        console.error('Auth error:', error);
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false
-        });
-        setAuthModal({ isOpen: true, mode: 'login' });
-      }
-    };
-
-    initializeAuth();
-
-    // Listen to auth state changes with error handling
-    let subscription: any = null;
-    try {
-      const authListener = supabaseAuthService.onAuthStateChange((user) => {
-        if (user) {
-          setAuthState({
-            user,
-            isAuthenticated: true,
-            isLoading: false
-          });
+          // Load user data in background without blocking
           setTimeout(() => loadUserTrades(user.id), 100);
         } else {
           setAuthState({
@@ -90,18 +59,62 @@ function App() {
             isAuthenticated: false,
             isLoading: false
           });
+          // Show auth modal after a brief delay to prevent flash
+          setTimeout(() => setAuthModal({ isOpen: true, mode: 'login' }), 50);
         }
-      });
-      subscription = authListener.data?.subscription;
-    } catch (error) {
-      console.error('Auth listener error:', error);
-    }
+      } catch (error) {
+        // Don't log expected errors, just handle them
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false
+        });
+        setTimeout(() => setAuthModal({ isOpen: true, mode: 'login' }), 50);
+      }
+    };
 
+    // Initialize auth immediately without await
+    initializeAuth().catch(() => {
+      // Fallback if initialization fails
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false
+      });
+      setAuthModal({ isOpen: true, mode: 'login' });
+    });
+
+    // Set up auth listener without blocking
+    const setupAuthListener = () => {
+      try {
+        const authListener = supabaseAuthService.onAuthStateChange((user) => {
+          if (user) {
+            setAuthState({
+              user,
+              isAuthenticated: true,
+              isLoading: false
+            });
+            setTimeout(() => loadUserTrades(user.id), 100);
+          } else {
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false
+            });
+          }
+        });
+        return authListener.data?.subscription;
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const subscription = setupAuthListener();
     return () => {
       try {
         subscription?.unsubscribe();
       } catch (error) {
-        console.error('Cleanup error:', error);
+        // Silent cleanup
       }
     };
   }, []);
@@ -111,7 +124,7 @@ function App() {
       const userTrades = await supabaseTradingService.getUserTrades(userId);
       setTrades(userTrades);
     } catch (error) {
-      console.error('Load trades error:', error);
+      // Silent error handling
       setTrades([]);
     }
   };
