@@ -279,21 +279,77 @@ class SupabaseAuthService {
     }
 
     try {
-      // Use simplified version for client-side access
-      return await this.getAllUsersSimple();
+      // Get all auth users first
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.log('Auth admin not available, using profiles method');
+        return await this.getAllUsersFromProfiles();
+      }
+
+      // Get additional data for each user
+      const users: AdminUser[] = [];
+      
+      for (const authUser of authUsers.users) {
+        const userData = await this.getUserDataForAdmin(authUser.id, authUser.email!);
+        if (userData) {
+          users.push(userData);
+        }
+      }
+      
+      return users;
     } catch (error) {
       console.error('Get all users error:', error);
-      return await this.getAllUsersSimple();
+      return await this.getAllUsersFromProfiles();
     }
   }
 
-  async getAllUsersSimple(): Promise<AdminUser[]> {
+  async getAllUsersFromProfiles(): Promise<AdminUser[]> {
     if (!isSupabaseConfigured || !supabase) {
       return [];
     }
 
     try {
-      // Get profiles first
+      // Get all profiles with auth user data
+      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        // Fallback: get profiles and create user data
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('*');
+
+        if (profileError) {
+          console.error('Get profiles error:', profileError);
+          return [];
+        }
+
+        return await this.processProfilesData(profiles);
+      }
+
+      // Process auth users
+      const users: AdminUser[] = [];
+      for (const authUser of authUsers) {
+        const userData = await this.getUserDataForAdmin(authUser.id, authUser.email!);
+        if (userData) {
+          users.push(userData);
+        }
+      }
+      
+      return users;
+    } catch (error) {
+      console.error('Get users from profiles error:', error);
+      // Final fallback - get profiles only
+      return await this.getProfilesOnly();
+    }
+  }
+
+  async getProfilesOnly(): Promise<AdminUser[]> {
+    if (!isSupabaseConfigured || !supabase) {
+      return [];
+    }
+
+    try {
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*');
@@ -303,23 +359,28 @@ class SupabaseAuthService {
         return [];
       }
 
-      // Get accounts separately
-      const { data: accounts, error: accountsError } = await supabase
+      return await this.processProfilesData(profiles);
+    } catch (error) {
+      console.error('Get profiles only error:', error);
+      return [];
+    }
+  }
+
+  async processProfilesData(profiles: any[]): Promise<AdminUser[]> {
+    if (!isSupabaseConfigured || !supabase) {
+      return [];
+    }
+
+    try {
+      // Get all accounts
+      const { data: accounts } = await supabase
         .from('accounts')
         .select('user_id, balance');
 
-      if (accountsError) {
-        console.error('Get accounts error:', accountsError);
-      }
-
-      // Get trades separately
-      const { data: trades, error: tradesError } = await supabase
+      // Get all trades
+      const { data: trades } = await supabase
         .from('trades')
         .select('user_id, status, profit_loss, created_at');
-
-      if (tradesError) {
-        console.error('Get trades error:', tradesError);
-      }
 
       return profiles.map(profile => {
         const userTrades = trades?.filter(t => t.user_id === profile.id) || [];
@@ -332,25 +393,80 @@ class SupabaseAuthService {
 
         return {
           id: profile.id,
-          email: `${profile.first_name?.toLowerCase() || 'user'}@example.com`,
-          firstName: profile.first_name || '',
+          email: profile.email || `${profile.first_name?.toLowerCase() || 'user'}@example.com`,
+          firstName: profile.first_name || 'User',
           lastName: profile.last_name || '',
           balance: userAccount?.balance || 0,
           totalDeposits: 0,
           totalWithdrawals: 0,
           totalProfit,
           createdAt: new Date(profile.created_at),
-          isVerified: false,
-          kycStatus: 'pending' as const,
+          isVerified: profile.is_verified || false,
+          kycStatus: (profile.kyc_status as 'pending' | 'approved' | 'rejected') || 'pending',
           totalTrades,
           winRate,
           lastLogin: new Date(),
-          accountStatus: 'active' as const
+          accountStatus: (profile.account_status as 'active' | 'suspended' | 'pending') || 'active'
         };
       });
     } catch (error) {
-      console.error('Get all users error:', error);
+      console.error('Process profiles data error:', error);
       return [];
+    }
+  }
+
+  async getUserDataForAdmin(userId: string, email: string): Promise<AdminUser | null> {
+    if (!isSupabaseConfigured || !supabase) {
+      return null;
+    }
+
+    try {
+      // Get profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      // Get account
+      const { data: account } = await supabase
+        .from('accounts')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      // Get trades
+      const { data: trades } = await supabase
+        .from('trades')
+        .select('status, profit_loss, created_at')
+        .eq('user_id', userId);
+
+      const userTrades = trades || [];
+      const totalTrades = userTrades.length;
+      const winningTrades = userTrades.filter(t => t.status === 'won').length;
+      const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+      const totalProfit = userTrades.reduce((sum, t) => sum + (t.profit_loss || 0), 0);
+
+      return {
+        id: userId,
+        email: email,
+        firstName: profile?.first_name || 'User',
+        lastName: profile?.last_name || '',
+        balance: account?.balance || 0,
+        totalDeposits: 0,
+        totalWithdrawals: 0,
+        totalProfit,
+        createdAt: profile ? new Date(profile.created_at) : new Date(),
+        isVerified: profile?.is_verified || false,
+        kycStatus: (profile?.kyc_status as 'pending' | 'approved' | 'rejected') || 'pending',
+        totalTrades,
+        winRate,
+        lastLogin: new Date(),
+        accountStatus: (profile?.account_status as 'active' | 'suspended' | 'pending') || 'active'
+      };
+    } catch (error) {
+      console.error('Get user data for admin error:', error);
+      return null;
     }
   }
 

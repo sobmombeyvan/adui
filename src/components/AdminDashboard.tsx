@@ -22,13 +22,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   const loadUsers = async () => {
     setLoading(true);
     try {
+      console.log('Loading users for admin dashboard...');
       const allUsers = await supabaseAuthService.getAllUsers();
+      console.log('Loaded users:', allUsers);
       setUsers(allUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
       setUsers([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filteredUsers = users.filter(user => 
