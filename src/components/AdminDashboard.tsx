@@ -22,16 +22,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   const loadUsers = async () => {
     setLoading(true);
     try {
-      console.log('Loading users for admin dashboard...');
       const allUsers = await supabaseAuthService.getAllUsers();
-      console.log('Loaded users:', allUsers);
       setUsers(allUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
       setUsers([]);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const filteredUsers = users.filter(user => 
@@ -221,11 +218,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleActivateUser(user.id)}
+                          onClick={() => supabaseAuthService.activateUser(user.id).then(() => loadUsers())}
                           className="text-green-400 hover:text-green-300 transition-colors"
                           title="Activate User"
                         >
-                          <UserCheck className="w-4 h-4" />
+                          <CheckCircle className="w-4 h-4" />
                         </button>
                       )}
                     </div>
