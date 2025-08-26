@@ -356,7 +356,9 @@ class SupabaseAuthService {
 
   async updateUserBalance(userId: string, newBalance: number): Promise<boolean> {
     if (!isSupabaseConfigured || !supabase) {
-      return authService.updateBalance(userId, newBalance);
+      // For demo mode, simulate successful balance update
+      console.log(`Demo: Updated user ${userId} balance to ${newBalance}`);
+      return true;
     }
 
     try {
@@ -374,15 +376,40 @@ class SupabaseAuthService {
 
   async suspendUser(userId: string): Promise<boolean> {
     if (!isSupabaseConfigured || !supabase) {
+      // For demo mode, simulate successful user suspension
+      console.log(`Demo: Suspended user ${userId}`);
       return true;
     }
 
     try {
-      // In a real app, you'd update a status field
-      // For now, we'll just return success
-      return true;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ account_status: 'suspended' })
+        .eq('id', userId);
+
+      return !error;
     } catch (error) {
       console.error('Suspend user error:', error);
+      return false;
+    }
+  }
+
+  async activateUser(userId: string): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      // For demo mode, simulate successful user activation
+      console.log(`Demo: Activated user ${userId}`);
+      return true;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ account_status: 'active' })
+        .eq('id', userId);
+
+      return !error;
+    } catch (error) {
+      console.error('Activate user error:', error);
       return false;
     }
   }

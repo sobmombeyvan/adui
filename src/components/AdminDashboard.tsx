@@ -22,8 +22,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const simpleUsers = await supabaseAuthService.getAllUsersSimple();
-      setUsers(simpleUsers);
+      const allUsers = await supabaseAuthService.getAllUsers();
+      setUsers(allUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
       setUsers([]);
@@ -208,13 +208,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleSuspendUser(user.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Suspend User"
-                      >
-                        <Ban className="w-4 h-4" />
-                      </button>
+                      {user.accountStatus === 'active' ? (
+                        <button
+                          onClick={() => handleSuspendUser(user.id)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          title="Suspend User"
+                        >
+                          <Ban className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleActivateUser(user.id)}
+                          className="text-green-400 hover:text-green-300 transition-colors"
+                          title="Activate User"
+                        >
+                          <UserCheck className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -266,7 +276,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter new balance"
                   step="0.01"
+                  min="0"
                 />
+              </div>
+
+              <div className="bg-yellow-600 bg-opacity-20 border border-yellow-600 rounded-lg p-3">
+                <div className="text-yellow-400 text-sm">
+                  <strong>Warning:</strong> This will directly modify the user's account balance. 
+                  Make sure this action is authorized and documented.
+                </div>
               </div>
 
               <div className="flex space-x-3 pt-4">
@@ -278,6 +296,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                 </button>
                 <button
                   onClick={handleUpdateBalance}
+                  disabled={!newBalance || parseFloat(newBalance) < 0}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
                 >
                   Update Balance
